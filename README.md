@@ -1,46 +1,41 @@
 # lab.sh
+A simple script to start a virtual machine in QEMU/libvirt using `virsh`
 
-Script sencillo para iniciar una maquina virtual en QEMU/libvirt usando `virsh`.
-
-## Requisitos
+## Requirements
 
 - `virsh`
-- permisos para ejecutar `sudo virsh`
+- permissions to run `sudo virsh`
 
-## Uso
+## Use
 
 ```bash
-./lab.sh <nombre-vm>
+./lab.sh <vm-name>
 ```
 
-Ejemplo:
+Example:
 
 ```bash
 ./lab.sh kali-linux
 ```
 
-## Ejecutarlo como `lab`
+## Run it as a lab
 
-Si quieres usar el script desde cualquier parte del sistema, crea un enlace simbolico en un directorio incluido en tu `PATH`:
-
+If you want to use the script from anywhere on the system, create a symbolic link in a directory included in your `PATH`:
 ```bash
 chmod +x lab.sh
 sudo ln -s "$(pwd)/lab.sh" /usr/local/bin/lab
 ```
 
-Luego podras ejecutarlo asi:
-
+Then you can run it like this:
 ```bash
 lab kali-linux
+To check if it's available:
 ```
-
-Para comprobar que quedo disponible:
-
 ```bash
 which lab
 ```
 
-## Que hace
+## What does it do?
 
-- comprueba si la VM ya esta en ejecucion
-- si no lo esta, intenta iniciarla
+- Check if the VM is already running
+- If it isn't, try to start it
