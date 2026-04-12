@@ -1,41 +1,120 @@
-# lab.sh
-A simple script to start a virtual machine in QEMU/libvirt using `virsh`
+# lab.sh KVM Virtual Machine Manager
+
+A lightweight Bash CLI tool for managing KVM/QEMU virtual machines via `virsh`. Designed to simplify day-to-day VM operations in a local lab environment.
+
+---
 
 ## Requirements
 
-- `virsh`
-- permissions to run `sudo virsh`
+- Linux with [libvirt](https://libvirt.org/) installed
+- `virsh` available in your `$PATH`
+- Sufficient `sudo` privileges to manage VMs
 
-## Use
-
-```bash
-./lab.sh <vm-name>
-```
-
-Example:
+Install libvirt on Arch Linux:
 
 ```bash
-./lab.sh kali-linux
+sudo pacman -S libvirt virt-client-tools
+sudo systemctl enable --now libvirtd
 ```
 
-## Run it as a lab
+Install libvirt on Debian/Ubuntu:
 
-If you want to use the script from anywhere on the system, create a symbolic link in a directory included in your `PATH`:
+```bash
+sudo apt install libvirt-clients libvirt-daemon-system
+```
+
+Install libvirt on Fedora/RHEL:
+
+```bash
+sudo dnf install libvirt
+```
+
+---
+
+## Installation
+
+1. Clone the script:
+
+```bash
+git clone https://github.com/s1nred/lab-qemu
+```
+
+2. Make it executable:
+
 ```bash
 chmod +x lab.sh
-sudo ln -s "$(pwd)/lab.sh" /usr/local/bin/lab
 ```
 
-Then you can run it like this:
+3. Optionally move it to your PATH for global access:
+
 ```bash
-lab kali-linux
-To check if it's available:
+sudo mv lab.sh /usr/local/bin/lab
 ```
+
+---
+
+## Usage
+
+```
+lab <command> [vm-name]
+```
+
+### Commands
+
+| Command | Arguments | Description |
+|---|---|---|
+| `start` | `<vm-name>` | Start the specified VM |
+| `stop` | `<vm-name>` | Gracefully shut down the specified VM |
+| `force-stop` | `<vm-name>` | Forcefully terminate the specified VM (equivalent to pulling the power) |
+| `list` | — | List all VMs and their current statuses |
+| `status` | `<vm-name>` | Display detailed information about the specified VM |
+| `help` | — | Show the help message |
+
+---
+
+## Examples
+
 ```bash
-which lab
+# Start a VM named "ubuntu-server"
+lab start ubuntu-server
+
+# Gracefully stop a VM
+lab stop ubuntu-server
+
+# Force stop a VM (use when graceful shutdown fails)
+lab force-stop ubuntu-server
+
+# List all VMs (running and stopped)
+lab list
+
+# Show detailed status of a VM
+lab status ubuntu-server
+
+# Display help
+lab help
 ```
 
-## What does it do?
+---
 
-- Check if the VM is already running
-- If it isn't, try to start it
+## Notes
+
+- **`stop`** sends an ACPI shutdown signal (graceful). The guest OS handles the shutdown, so it may take a few seconds.
+- **`force-stop`** calls `virsh destroy`, which immediately kills the VM process. Use this only when the VM is unresponsive, as it may cause data loss or filesystem corruption.
+- **`start`** checks if the VM is already running before attempting to start it, preventing duplicate start errors.
+- The script validates that `virsh` is installed before executing any command.
+
+---
+
+## Project Structure
+
+```
+lab
+├── lab.sh       # Main script
+└── README.md    # This file
+```
+
+---
+
+## License
+
+MIT License. Feel free to use, modify, and distribute.
