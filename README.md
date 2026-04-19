@@ -36,7 +36,8 @@ sudo dnf install libvirt
 1. Clone the script:
 
 ```bash
-git clone https://github.com/s1nred/lab-qemu
+git clone https://github.com/s1nred/lab-qemu.git
+cd lab-qemu
 ```
 
 2. Make it executable:
@@ -64,11 +65,12 @@ lab <command> [vm-name]
 | Command | Arguments | Description |
 |---|---|---|
 | `start` | `<vm-name>` | Start the specified VM |
-| `stop` | `<vm-name>` | Gracefully shut down the specified VM |
+| `stop` | `<vm-name>` | Send a graceful shutdown signal to the specified VM |
 | `force-stop` | `<vm-name>` | Forcefully terminate the specified VM (equivalent to pulling the power) |
 | `list` | — | List all VMs and their current statuses |
 | `status` | `<vm-name>` | Display detailed information about the specified VM |
 | `help` | — | Show the help message |
+| `-h`, `--help` | — | Show the help message |
 
 ---
 
@@ -101,7 +103,9 @@ lab help
 - **`stop`** sends an ACPI shutdown signal (graceful). The guest OS handles the shutdown, so it may take a few seconds.
 - **`force-stop`** calls `virsh destroy`, which immediately kills the VM process. Use this only when the VM is unresponsive, as it may cause data loss or filesystem corruption.
 - **`start`** checks if the VM is already running before attempting to start it, preventing duplicate start errors.
+- VM-specific commands now validate that the domain exists before attempting to operate on it.
 - The script validates that `virsh` is installed before executing any command.
+- Running `lab` without arguments shows the help output by default.
 
 ---
 
