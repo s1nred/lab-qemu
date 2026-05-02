@@ -67,10 +67,12 @@ lab <command> [vm-name]
 | `start` | `<vm-name>` | Start the specified VM |
 | `stop` | `<vm-name>` | Send a graceful shutdown signal to the specified VM |
 | `force-stop` | `<vm-name>` | Forcefully terminate the specified VM (equivalent to pulling the power) |
+| `restart` | `<vm-name>` | Gracefully restart the specified VM (shutdown + start) |
+| `force-restart` | `<vm-name>` | Force restart the specified VM (destroy + start) |
 | `list` | — | List all VMs and their current statuses |
 | `status` | `<vm-name>` | Display detailed information about the specified VM |
-| `help` | — | Show the help message |
-| `-h`, `--help` | — | Show the help message |
+| `help`, `-h`, `--help` | — | Show the help message |
+| `--version`, `-V` | — | Show the script version |
 
 ---
 
@@ -86,6 +88,15 @@ lab stop ubuntu-server
 # Force stop a VM (use when graceful shutdown fails)
 lab force-stop ubuntu-server
 
+# Gracefully restart a VM
+lab restart ubuntu-server
+
+# Force restart a VM
+lab force-restart ubuntu-server
+
+# Check script version
+lab --version
+
 # List all VMs (running and stopped)
 lab list
 
@@ -100,10 +111,12 @@ lab help
 
 ## Notes
 
+- **`start`** checks if the VM is already running before attempting to start it, preventing duplicate start errors.
 - **`stop`** sends an ACPI shutdown signal (graceful). The guest OS handles the shutdown, so it may take a few seconds.
 - **`force-stop`** calls `virsh destroy`, which immediately kills the VM process. Use this only when the VM is unresponsive, as it may cause data loss or filesystem corruption.
-- **`start`** checks if the VM is already running before attempting to start it, preventing duplicate start errors.
-- VM-specific commands now validate that the domain exists before attempting to operate on it.
+- **`restart`** sends a shutdown signal, waits 5 seconds, then starts the VM. If the VM takes longer to shut down, use `force-restart` instead.
+- **`force-restart`** calls `virsh destroy` followed by `virsh start`. No waiting period, no data safety guarantees.
+- VM-specific commands validate that the domain exists before attempting to operate on it.
 - The script validates that `virsh` is installed before executing any command.
 - Running `lab` without arguments shows the help output by default.
 
