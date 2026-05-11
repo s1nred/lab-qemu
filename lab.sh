@@ -2,7 +2,7 @@
 
 set -u
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 
 readonly RED='\033[0;31m'
 readonly GREEN='\033[0;32m'
@@ -16,7 +16,14 @@ warn() { echo -e "${YELLOW}${1}${NC}"; }
 info() { echo -e "${BLUE}${1}${NC}"; }
 
 COMMAND="${1:-help}"
-VM_NAME="${2:-}"
+
+if [[ "$COMMAND" == "snapshot" ]]; then
+    SNAPSHOT_ACTION="${2:-}"
+    VM_NAME="${3:-}"
+    SNAPSHOT_NAME="${4:-}"
+else
+    VM_NAME="${2:-}"
+fi
 
 if [[ "$COMMAND" == "--version" || "$COMMAND" == "-V" ]]; then
     echo "lab.sh v${VERSION}"
@@ -26,14 +33,22 @@ fi
 print_usage() {
     echo "Usage: lab <command> [vm-name]"
     echo ""
-    echo "Commands:"
+    echo "Virtual Machine:"
     echo "  start <vm-name>        - Start the specified VM"
     echo "  stop <vm-name>         - Send a graceful shutdown signal to the VM"
     echo "  force-stop <vm-name>   - Force stop the specified VM"
     echo "  restart <vm-name>      - Gracefully restart the specified VM"
     echo "  force-restart <vm-name> - Force restart the specified VM"
     echo "  list                   - List all VMs and their statuses"
-    echo "  status <vm-name>       - Show the status of the specified VM"
+    echo "  status <vm-name>       - Show detailed info about the specified VM"
+    echo ""
+    echo "Snapshots:"
+    echo "  snapshot list <vm-name>           - List all snapshots"
+    echo "  snapshot create <vm-name> <name>  - Create a snapshot"
+    echo "  snapshot revert <vm-name> <name>  - Revert to a snapshot"
+    echo "  snapshot delete <vm-name> <name>  - Delete a snapshot"
+    echo ""
+    echo "Other:"
     echo "  help, -h, --help       - Show this help message"
     echo "  --version, -V          - Show version"
     echo ""
@@ -94,6 +109,78 @@ stop_vm() {
     fi
 }
 
+snapshot_list() {
+    if ! vm_exists; then
+        warn "VM '$VM_NAME' does not exist."
+        exit 1
+    fi
+    info "Snapshots for VM '$VM_NAME':"
+    sudo virsh snapshot-list "$VM_NAME"
+}
+
+snapshot_create() {
+    if ! vm_exists; then
+        warn "VM '$VM_NAME' does not exist."
+        exit 1
+    fi
+    if [ -z "$SNAPSHOT_NAME" ]; then
+        error_msg "Error: Snapshot name is required for 'snapshot create'."
+        exit 1
+    fi
+    sudo virsh snapshot-create-as "$VM_NAME" --name "$SNAPSHOT_NAME"
+    if [ $? -eq 0 ]; then
+        success "Snapshot '$SNAPSHOT_NAME' created for VM '$VM_NAME'."
+    else
+        error_msg "Failed to create snapshot '$SNAPSHOT_NAME' for VM '$VM_NAME'."
+        exit 1
+    fi
+}
+
+snapshot_revert() {
+    if ! vm_exists; then
+        warn "VM '$VM_NAME' does not exist."
+        exit 1
+    fi
+    if [ -z "$SNAPSHOT_NAME" ]; then
+        error_msg "Error: Snapshot name is required for 'snapshot revert'."
+        exit 1
+    fi
+    # Check if the snapshot exists before attempting revert
+    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -q "^${SNAPSHOT_NAME}$"; then
+        error_msg "Snapshot '$SNAPSHOT_NAME' does not exist on VM '$VM_NAME'."
+        exit 1
+    fi
+    sudo virsh snapshot-revert "$VM_NAME" --snapshotname "$SNAPSHOT_NAME"
+    if [ $? -eq 0 ]; then
+        success "Reverted VM '$VM_NAME' to snapshot '$SNAPSHOT_NAME'."
+    else
+        error_msg "Failed to revert VM '$VM_NAME' to snapshot '$SNAPSHOT_NAME'."
+        exit 1
+    fi
+}
+
+snapshot_delete() {
+    if ! vm_exists; then
+        warn "VM '$VM_NAME' does not exist."
+        exit 1
+    fi
+    if [ -z "$SNAPSHOT_NAME" ]; then
+        error_msg "Error: Snapshot name is required for 'snapshot delete'."
+        exit 1
+    fi
+    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -q "^${SNAPSHOT_NAME}$"; then
+        error_msg "Snapshot '$SNAPSHOT_NAME' does not exist on VM '$VM_NAME'."
+        exit 1
+    fi
+    sudo virsh snapshot-delete "$VM_NAME" --snapshotname "$SNAPSHOT_NAME"
+    if [ $? -eq 0 ]; then
+        success "Snapshot '$SNAPSHOT_NAME' deleted from VM '$VM_NAME'."
+    else
+        error_msg "Failed to delete snapshot '$SNAPSHOT_NAME' from VM '$VM_NAME'."
+        exit 1
+    fi
+}
+
 check_deps
 
 case "$COMMAND" in
@@ -142,6 +229,33 @@ case "$COMMAND" in
         fi
         sudo virsh destroy "$VM_NAME" 2> /dev/null
         start_vm
+        ;;
+    snapshot)
+        if [ -z "$SNAPSHOT_ACTION" ]; then
+            error_msg "Error: Snapshot action is required."
+            info "Usage: lab snapshot <list|create|revert|delete> <vm-name> [snapshot-name]"
+            exit 1
+        fi
+        require_vm_name
+        case "$SNAPSHOT_ACTION" in
+            list)
+                snapshot_list
+                ;;
+            create)
+                snapshot_create
+                ;;
+            revert)
+                snapshot_revert
+                ;;
+            delete)
+                snapshot_delete
+                ;;
+            *)
+                error_msg "Error: Invalid snapshot action '$SNAPSHOT_ACTION'."
+                info "Valid actions: list, create, revert, delete"
+                exit 1
+                ;;
+        esac
         ;;
     list)
         sudo virsh list --all

@@ -71,6 +71,10 @@ lab <command> [vm-name]
 | `force-restart` | `<vm-name>` | Force restart the specified VM (destroy + start) |
 | `list` | — | List all VMs and their current statuses |
 | `status` | `<vm-name>` | Display detailed information about the specified VM |
+| `snapshot list` | `<vm-name>` | List all snapshots for the specified VM |
+| `snapshot create` | `<vm-name> <name>` | Create a named snapshot of the specified VM |
+| `snapshot revert` | `<vm-name> <name>` | Revert the specified VM to a named snapshot |
+| `snapshot delete` | `<vm-name> <name>` | Delete a named snapshot from the specified VM |
 | `help`, `-h`, `--help` | — | Show the help message |
 | `--version`, `-V` | — | Show the script version |
 
@@ -94,6 +98,18 @@ lab restart ubuntu-server
 # Force restart a VM
 lab force-restart ubuntu-server
 
+# Create a snapshot before making changes
+lab snapshot create ubuntu-server before-update
+
+# List all snapshots
+lab snapshot list ubuntu-server
+
+# Revert to a previous snapshot
+lab snapshot revert ubuntu-server before-update
+
+# Delete an old snapshot
+lab snapshot delete ubuntu-server old-state
+
 # Check script version
 lab --version
 
@@ -116,6 +132,7 @@ lab help
 - **`force-stop`** calls `virsh destroy`, which immediately kills the VM process. Use this only when the VM is unresponsive, as it may cause data loss or filesystem corruption.
 - **`restart`** sends a shutdown signal, waits 5 seconds, then starts the VM. If the VM takes longer to shut down, use `force-restart` instead.
 - **`force-restart`** calls `virsh destroy` followed by `virsh start`. No waiting period, no data safety guarantees.
+- **Snapshots** are essential for lab work: create one before risky changes, revert if something breaks, delete when no longer needed. Snapshots preserve the VM state (disk, memory, devices) at the moment of creation.
 - VM-specific commands validate that the domain exists before attempting to operate on it.
 - The script validates that `virsh` is installed before executing any command.
 - Running `lab` without arguments shows the help output by default.
