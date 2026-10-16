@@ -130,9 +130,9 @@ lab help
 - **`start`** checks if the VM is already running before attempting to start it, preventing duplicate start errors.
 - **`stop`** sends an ACPI shutdown signal (graceful). The guest OS handles the shutdown, so it may take a few seconds.
 - **`force-stop`** calls `virsh destroy`, which immediately kills the VM process. Use this only when the VM is unresponsive, as it may cause data loss or filesystem corruption.
-- **`restart`** sends a shutdown signal, waits 5 seconds, then starts the VM. If the VM takes longer to shut down, use `force-restart` instead.
-- **`force-restart`** calls `virsh destroy` followed by `virsh start`. No waiting period, no data safety guarantees.
-- **Snapshots** are essential for lab work: create one before risky changes, revert if something breaks, delete when no longer needed. Snapshots preserve the VM state (disk, memory, devices) at the moment of creation.
+- **`restart`** requests a graceful shutdown and waits up to 30 seconds for the VM to reach the `shut off` state before starting it again. If the timeout is reached, the restart is aborted without forcing the VM off.
+- **`force-restart`** force-stops the VM only when it is running, verifies that the stop command succeeds, then attempts to start it. Force-stopping may cause data loss.
+- **Snapshots** are essential for lab work: create one before risky changes, revert if something breaks, delete when no longer needed. Snapshot support and the captured state depend on the libvirt storage backend and VM configuration. Verify snapshot compatibility and backups before relying on a snapshot.
 - VM-specific commands validate that the domain exists before attempting to operate on it.
 - The script validates that `virsh` is installed before executing any command.
 - Running `lab` without arguments shows the help output by default.
