@@ -146,7 +146,7 @@ snapshot_revert() {
         exit 1
     fi
     # Check if the snapshot exists before attempting revert
-    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -q "^${SNAPSHOT_NAME}$"; then
+    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -Fxq -- "$SNAPSHOT_NAME"; then
         error_msg "Snapshot '$SNAPSHOT_NAME' does not exist on VM '$VM_NAME'."
         exit 1
     fi
@@ -168,7 +168,7 @@ snapshot_delete() {
         error_msg "Error: Snapshot name is required for 'snapshot delete'."
         exit 1
     fi
-    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -q "^${SNAPSHOT_NAME}$"; then
+    if ! sudo virsh snapshot-list "$VM_NAME" --name 2> /dev/null | grep -Fxq -- "$SNAPSHOT_NAME"; then
         error_msg "Snapshot '$SNAPSHOT_NAME' does not exist on VM '$VM_NAME'."
         exit 1
     fi
@@ -218,7 +218,23 @@ case "$COMMAND" in
             exit 1
         fi
         info "Waiting for VM '$VM_NAME' to shut down..."
-        sleep 5
+        # Shutdown is asynchronous: wait until the guest has actually stopped.
+        stopped=false
+        for ((attempt=0; attempt<30; attempt++)); do
+            state=$(sudo virsh domstate "$VM_NAME" 2>/dev/null) || {
+                error_msg "Could not query VM '$VM_NAME' state."
+                exit 1
+            }
+            if [[ "$state" == "shut off" ]]; then
+                stopped=true
+                break
+            fi
+            sleep 1
+        done
+        if [[ "$stopped" != true ]]; then
+            error_msg "VM '$VM_NAME' did not shut down within 30 seconds; restart aborted."
+            exit 1
+        fi
         start_vm
         ;;
     force-restart)
@@ -227,7 +243,12 @@ case "$COMMAND" in
             warn "VM '$VM_NAME' does not exist."
             exit 1
         fi
-        sudo virsh destroy "$VM_NAME" 2> /dev/null
+        if sudo virsh domstate "$VM_NAME" 2>/dev/null | grep -Fxq "running"; then
+            if ! sudo virsh destroy "$VM_NAME"; then
+                error_msg "Failed to stop VM '$VM_NAME'; restart aborted."
+                exit 1
+            fi
+        fi
         start_vm
         ;;
     snapshot)
